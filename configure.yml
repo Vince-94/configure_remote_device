@@ -1,0 +1,86 @@
+---
+- name: Configure Raspberry Pi Zero 2 W devices
+  hosts: rpi  # Targets the group from inventory
+  strategy: free
+  become: yes  # Use sudo for privileged tasks
+  vars:
+    # python_script_path: /home/vince/my_script.py
+    # cpp_binary_path: /home/vince/my_cpp_binary
+    static_ip:
+      rpi-zero2w-01: 192.168.100.101/24
+      rpi-zero2w-02: 192.168.100.102/24
+    gateway: 192.168.100.1  # Your router's IP
+    dns_servers: ['8.8.8.8', '8.8.4.4']
+
+  tasks:
+
+    # Set static IP via netplan (Ubuntu's network config tool)
+    - name: Configure static IP
+      copy:
+        content: |
+          network:
+            version: 2
+            renderer: networkd
+            wifis:
+              wlan0:
+                dhcp4: no
+                addresses: ["{{ static_ip[inventory_hostname] }}"]
+                routes:
+                  - to: default
+                    via: "{{ gateway }}"
+                nameservers:
+                  addresses: {{ dns_servers }}
+        dest: /etc/netplan/99-static-ip.yaml
+        mode: '0644'
+
+    - name: Set new_ip (strip CIDR)
+      set_fact:
+        new_ip: "{{ static_ip[inventory_hostname].split('/')[0] }}"
+
+    - name: Debug new_ip
+      debug:
+        msg: "New IP will be {{ new_ip }}"
+
+    - name: Apply netplan (do not block if connection drops)
+      command: netplan apply
+      async: 45
+      poll: 0
+      become: yes
+      ignore_errors: yes
+
+    - name: Wait for SSH on new IP
+      wait_for:
+        host: "{{ new_ip }}"
+        port: 22
+        timeout: 180
+        state: started
+      delegate_to: localhost
+
+    - name: Update in-memory inventory to new IP
+      add_host:
+        name: "{{ inventory_hostname }}"
+        ansible_host: "{{ new_ip }}"
+
+    - name: Reconnect using new IP
+      meta: reset_connection
+
+    # Update the system
+    - name: Update and upgrade packages
+      become: yes
+      apt:
+        update_cache: yes
+        upgrade: dist
+        autoremove: yes
+
+    # Install deps
+    - name: Install dependencies
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - g++
+          - build-essential
+          - cmake
+          - git
+        state: present
