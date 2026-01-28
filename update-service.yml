@@ -1,0 +1,47 @@
+---
+- name: Update and Restart Service
+  hosts: rpi  # Targets the group from inventory
+  become: yes
+  vars:
+    # Reuse your vars from the main playbook
+    remote_user: vince
+    repo_name: calendar_alert_bot
+    repo_dest: "/home/{{ remote_user }}/{{ remote_user }}"
+    requirements_path: "{{ repo_dest }}/requirements.txt"
+    use_venv: false
+    venv_path: "{{ repo_dest }}/venv"
+    systemd_service_name: "{{ remote_user }}"
+
+  tasks:
+    - name: Pull latest changes from GitHub repo
+      git:
+        repo: "{{ repo_url }}"  # Assume this is defined in inventory/group_vars or passed via --extra-vars
+        dest: "{{ repo_dest }}"
+        version: main
+        update: yes  # This pulls changes if available
+        force: yes   # Optional: Overwrite local changes if conflicts (use cautiously)
+      become_user: "{{ remote_user }}"
+      register: git_pull_result  # Track if changes were made
+
+    - name: Re-install Python dependencies if repo updated
+      pip:
+        requirements: "{{ requirements_path }}"
+        executable: pip3
+        virtualenv: "{{ venv_path }}"  # Handles venv/no-venv as before
+        extra_args: "--user"  # For no-venv
+      become_user: "{{ remote_user }}"
+      when: git_pull_result.changed  # Only run if git pulled changes
+
+    - name: Restart service if updates applied
+      systemd:
+        name: "{{ systemd_service_name }}"
+        state: restarted
+        daemon_reload: yes  # Reload if service file might have changed (rare for updates)
+      when: git_pull_result.changed  # Only restart if needed
+
+    # Optional: Add a handler for more complex restarts
+    # handlers:
+    #   - name: Restart calendar_alert_bot
+    #     systemd:
+    #       name: "{{ systemd_service_name }}"
+    #       state: restarted

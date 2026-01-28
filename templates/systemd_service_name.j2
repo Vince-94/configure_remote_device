@@ -1,0 +1,22 @@
+[Unit]
+Description={{ systemd_service_name }} - Background service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ remote_user }}
+WorkingDirectory={{ repo_dest }}
+{% if use_venv %}
+ExecStart={{ venv_path }}/bin/python {{ python_script_path }}
+{% else %}
+ExecStart=/usr/bin/python3 {{ python_script_path }}
+{% endif %}
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

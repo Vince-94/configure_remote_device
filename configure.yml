@@ -4,8 +4,6 @@
   strategy: free
   become: yes  # Use sudo for privileged tasks
   vars:
-    # python_script_path: /home/vince/my_script.py
-    # cpp_binary_path: /home/vince/my_cpp_binary
     static_ip:
       rpi-zero2w-01: 192.168.100.101/24
       rpi-zero2w-02: 192.168.100.102/24

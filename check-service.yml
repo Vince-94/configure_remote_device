@@ -1,0 +1,37 @@
+---
+- name: Check Service Status
+  hosts: rpi
+  become: yes
+  vars:
+    systemd_service_name: "calendar_alert_bot"
+
+  tasks:
+    - name: Get service facts
+      systemd:
+        name: "{{ systemd_service_name }}"
+      register: service_status
+
+    - name: Display service status
+      debug:
+        msg: |
+          Service: {{ systemd_service_name }}
+          Active: {{ service_status.status.ActiveState }}
+          SubState: {{ service_status.status.SubState }}
+          LoadState: {{ service_status.status.LoadState }}
+          Main PID: {{ service_status.status.MainPID | default('N/A') }}
+          Recent Logs: Use 'journalctl -u {{ systemd_service_name }} -n 10' for details.
+
+    - name: Check recent logs for errors
+      command: journalctl -u {{ systemd_service_name }} -n 20 --no-pager
+      register: service_logs
+      changed_when: false  # Not a change, just query
+
+    - name: Display recent logs
+      debug:
+        msg: "{{ service_logs.stdout_lines }}"
+
+    - name: Fail if service is not running
+      fail:
+        msg: "Service {{ systemd_service_name }} is not active!"
+      when: service_status.status.ActiveState != 'active'
+      ignore_errors: yes  # Optional: Don't abort playbook

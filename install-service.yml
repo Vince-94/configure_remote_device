@@ -1,0 +1,57 @@
+- name: Install Service
+  hosts: rpi  # Targets the group from inventory
+  become: yes  # Use sudo for privileged tasks
+  vars:
+    remote_user: vince
+    repo_name: calendar_alert_bot
+    repo_url: "https://{{ github_pat }}@github.com/Vince-94/{{ repo_name }}.git"   # Replace with your GitHub repo URL
+    repo_dest: "/home/{{ remote_user }}/{{ remote_user }}"
+    python_script_path: "{{ repo_dest }}/main.py"               # Path to the main script
+    requirements_path: "{{ repo_dest }}/requirements.txt"       # Path to requirements
+    use_venv: true                                             # Set to false for no venv; true to use venv
+    venv_path: "{{ repo_dest }}/venv"                           # Only used if use_venv: true
+    systemd_service_name: "{{ repo_name }}"
+
+  tasks:
+    - name: Install base Python dependencies
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+        state: present
+
+    - name: Clone GitHub repo
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ repo_dest }}"
+        version: main  # Or a specific tag/branch for determinism
+        update: yes
+      become_user: "{{ remote_user }}"
+
+    - name: Create virtual environment
+      command: python3 -m venv "{{ venv_path }}"
+      args:
+        creates: "{{ venv_path }}"
+      become_user: "{{ remote_user }}"
+      when: use_venv
+
+    - name: Install Python dependencies from requirements.txt
+      pip:
+        requirements: "{{ requirements_path }}"
+        virtualenv: "{{ venv_path if use_venv else omit }}"
+        virtualenv_command: "{{ 'python3 -m venv' if use_venv else omit }}"
+      become_user: "{{ remote_user }}"
+
+    - name: Create Python service file
+      template:
+        src: "systemd_service_name.j2"  # in templates
+        dest: "/etc/systemd/system/{{ systemd_service_name }}.service"
+        mode: '0644'  # Optional: Set permissions
+
+    - name: Enable and start Python service
+      systemd:
+        name: "{{ systemd_service_name }}"
+        enabled: yes
+        state: started
+        daemon_reload: yes
