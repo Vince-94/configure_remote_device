@@ -6,6 +6,7 @@
     # Reuse your vars from the main playbook
     remote_user: vince
     repo_name: calendar_alert_bot
+    repo_url: "https://{{ github_pat }}@github.com/Vince-94/{{ repo_name }}.git"   # Replace with your GitHub repo URL
     repo_dest: "/home/{{ remote_user }}/{{ remote_user }}"
     requirements_path: "{{ repo_dest }}/requirements.txt"
     use_venv: false
@@ -23,12 +24,11 @@
       become_user: "{{ remote_user }}"
       register: git_pull_result  # Track if changes were made
 
-    - name: Re-install Python dependencies if repo updated
+    - name: Install Python dependencies from requirements.txt
       pip:
         requirements: "{{ requirements_path }}"
-        executable: pip3
-        virtualenv: "{{ venv_path }}"  # Handles venv/no-venv as before
-        extra_args: "--user"  # For no-venv
+        virtualenv: "{{ venv_path if use_venv else omit }}"
+        virtualenv_command: "{{ 'python3 -m venv' if use_venv else omit }}"
       become_user: "{{ remote_user }}"
       when: git_pull_result.changed  # Only run if git pulled changes
 

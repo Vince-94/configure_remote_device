@@ -25,13 +25,22 @@ sudo apt install sshpass -y
 3. In `inventory.ini` replace dynamic IP with the new static IP
 
 
-### Install a service
+## Operations
+
+### Install service
 
 ```sh
 ansible-playbook -i inventory.ini -K --ask-vault-pass install-service.yml
-ansible-playbook -i inventory.ini -K --ask-vault-pass update-service.yml
-ansible-playbook -i inventory.ini -K --ask-vault-pass check-service.yml
 ```
 
+### Update service
+```sh
+ansible-playbook -i inventory.ini -K --ask-vault-pass update-service.yml
+```
 
-
+### Check/Stop/Restart service
+```sh
+ansible-playbook -i inventory.ini -K --ask-vault-pass check-service.yml
+[TODO] ansible-playbook -i inventory.ini -K --ask-vault-pass stop-service.yml
+[TODO] ansible-playbook -i inventory.ini -K --ask-vault-pass restart-service.yml
+```
