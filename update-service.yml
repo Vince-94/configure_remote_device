@@ -1,6 +1,6 @@
 ---
 - name: Update and Restart Service
-  hosts: rpi  # Targets the group from inventory
+  hosts: home_server
   become: yes
   vars:
     # Reuse your vars from the main playbook

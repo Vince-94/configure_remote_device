@@ -1,6 +1,6 @@
 ---
 - name: Check Service Status
-  hosts: rpi
+  hosts: home_server
   become: yes
 
   vars:

@@ -1,6 +1,6 @@
 ---
 - name: Configure Raspberry Pi Zero 2 W devices
-  hosts: rpi  # Targets the group from inventory
+  hosts: all
   strategy: free
   become: yes  # Use sudo for privileged tasks
   vars:

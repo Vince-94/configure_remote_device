@@ -1,6 +1,6 @@
 ---
 - name: Restart calendar_alert_bot service
-  hosts: rpi
+  hosts: home_server
   become: yes
 
   vars:

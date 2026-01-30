@@ -1,5 +1,5 @@
 - name: Install Service
-  hosts: rpi  # Targets the group from inventory
+  hosts: home_server
   become: yes  # Use sudo for privileged tasks
   vars:
     remote_user: vince
