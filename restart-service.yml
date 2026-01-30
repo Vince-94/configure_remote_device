@@ -1,0 +1,57 @@
+---
+- name: Restart calendar_alert_bot service
+  hosts: rpi
+  become: yes
+
+  vars:
+    systemd_service_name: "calendar_alert_bot"
+
+  tasks:
+    - name: Reload systemd daemon (useful if unit file might have changed)
+      ansible.builtin.systemd_service:
+        daemon_reload: yes
+      changed_when: false
+
+    - name: Restart the service
+      ansible.builtin.systemd_service:
+        name:    "{{ systemd_service_name }}"
+        state:   restarted
+        enabled: yes
+      register: restart_result
+
+    - name: Show restart summary
+      ansible.builtin.debug:
+        msg: |
+          Service       : {{ systemd_service_name }}
+          Action        : restarted
+          Changed       : {{ restart_result.changed }}
+          ActiveState   : {{ restart_result.after.ActiveState | default('unknown') }}
+          SubState      : {{ restart_result.after.SubState    | default('unknown') }}
+          MainPID       : {{ restart_result.after.MainPID     | default('N/A') }}
+
+    - name: Wait a few seconds for service to (re)start properly
+      ansible.builtin.pause:
+        seconds: 4
+      when: restart_result.changed
+
+    - name: Get fresh service status after restart
+      ansible.builtin.systemd_service:
+        name: "{{ systemd_service_name }}"
+      register: final_status
+
+    - name: Fail if service did not become active
+      ansible.builtin.fail:
+        msg: "Service {{ systemd_service_name }} is not active after restart! (state = {{ final_status.status.ActiveState }})"
+      when: final_status.status.ActiveState != 'active'
+
+    # Show last lines after restart (helps debugging)
+    - name: Show last 15 log lines after restart
+      ansible.builtin.command: journalctl -u {{ systemd_service_name }} -n 15 --no-pager
+      register: post_restart_logs
+      changed_when: false
+      when: final_status.status.ActiveState == 'active'   # only if it looks healthy
+
+    - name: Display recent logs
+      ansible.builtin.debug:
+        msg: "{{ post_restart_logs.stdout_lines }}"
+      when: post_restart_logs.stdout_lines is defined

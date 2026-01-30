@@ -41,6 +41,6 @@ ansible-playbook -i inventory.ini -K --ask-vault-pass update-service.yml
 ### Check/Stop/Restart service
 ```sh
 ansible-playbook -i inventory.ini -K --ask-vault-pass check-service.yml
-[TODO] ansible-playbook -i inventory.ini -K --ask-vault-pass stop-service.yml
-[TODO] ansible-playbook -i inventory.ini -K --ask-vault-pass restart-service.yml
+ansible-playbook -i inventory.ini -K --ask-vault-pass stop-service.yml
+ansible-playbook -i inventory.ini -K --ask-vault-pass restart-service.yml
 ```
